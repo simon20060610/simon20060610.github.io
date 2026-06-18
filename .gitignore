@@ -1,0 +1,12 @@
+.DS_Store
+Thumbs.db
+db.json
+*.log
+hexo-server*.log
+start-hexo-server.cmd
+node_modules/
+public/
+.deploy*/
+themes/*/.git/
+themes/*/.git-backup/
+_multiconfig.yml

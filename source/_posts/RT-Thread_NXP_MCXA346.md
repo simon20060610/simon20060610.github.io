@@ -1,0 +1,273 @@
+---
+title: RT-Thread 基于 NXP FRDM-MCXA346 的 PWM 应用与呼吸灯实践教程
+date: 2025-11-23
+categories:
+  - RT-Thread
+tags:
+  - RT-Thread
+  - NXP
+  - MCXA346
+  - PWM
+  - Embedded
+toc: true
+comments: false
+---
+
+B站视频教程 *** https://www.bilibili.com/video/BV18x2sBvE3L/ ***
+
+## 一、PWM 的简单介绍
+
+脉冲宽度调制（英语：Pulse-width modulation，缩写：PWM），简称脉宽调制，是用脉冲来输出模拟信号的一种技术。一般变换后脉冲的周期固定，但脉冲的工作周期会依模拟信号的大小而改变。
+
+通过利用微处理器（本文基于 NXP FRDM-MCXA346）的数字输出对外设等控制的一种信号，它通过控制信号的脉冲宽度，实现对例如电流的精确控制。最常见的应用是用来调节亮度。
+
+## 二、PWM 的相关参数
+
+- **频率（Frequency, $f_{pwm}$）**
+    - **定义**：PWM 信号每秒重复的次数（Hz）。
+    - **关系式**：`f_pwm = timer_clock / (prescaler * (ARR + 1))`
+    - **影响**：决定输出周期与控制带宽。
+
+- **周期（Period, $T$）**
+    - **定义**：PWM 信号的一个完整周期，`T = 1 / f_pwm`。
+    - **单位**：秒（s）、毫秒（ms）或微秒（μs）。
+
+- **占空比（Duty cycle, $D$）**
+    - **定义**：高电平时间与周期的比值，通常以百分比表示。
+    - **关系式**：`D = CCR / (ARR + 1)`（CCR = 比较寄存器值）
+    - **设置**：`CCR = round(D * (ARR + 1))`
+
+- **分辨率（Resolution）**
+    - **描述**：计数器能表示的不同占空比级数，通常为 ARR 的位宽。
+    - **计算**：`有效位数 ≈ log2(ARR + 1)`。
+
+- **计时器时钟与预分频（`timer_clock` / `prescaler`）**
+    - `timer_clock`：定时器输入时钟（来自系统时钟或总线时钟）。
+    - `prescaler`：将 `timer_clock` 降低以满足目标频率或提升计数范围。
+
+> 更多信息不再赘述，相信各位大佬一定有自己的见解。如果你第一次接触，也可在网络上搜索更多详解。
+
+## 三、关于 NXP FRDM-MCXA346
+
+NXP MCXA346 系列芯片被定位为 **专为电机控制（如 PMSM、BLDC）优化的混合信号 MCU**。这意味着其片上的 FlexPWM 不仅仅是一个通用的定时器，而是一个为高精度、快速控制回路设计的专业模块。
+
+该芯片在电机控制领域的优势主要体现在以下几个核心硬件协同上：
+
+### 1. FlexPWM
+FlexPWM 是该芯片的控制核心，专为高精度和快速响应设计，能够满足复杂电机控制算法对波形生成的严苛要求。
+
+### 2. 高级数学加速单元 (MAU) 协作
+MCXA346 内置了 **MAU (Math Acceleration Unit)**，专门用于硬件加速电机控制中常用的数学运算（如三角函数、倒数、平方根等）。
+
+*   **优势**：MAU 可以极大地缩短控制算法（例如磁场定向控制 FOC）的执行时间，从而为 FlexPWM 留出更多的时间窗口来准备和加载新的 PWM 占空比，显著提升控制环路的频率和响应速度。
+
+## 四、实操部分
+
+### 我们这里通过示波器和呼吸灯现象来测试 PWM 输出
+
+### 一、首先，我们需要去官网下载相关环境
+
+1.  **获取 SDK 与工具**：
+    这里给出官方的 Github：[RT-Thread Releases](https://github.com/RT-Thread/rt-thread/releases)。我们找到最新的版本来克隆。
+    同时你需要 RT-Thread 的 env 工具（在官网下载，是一个压缩包，解压后双击 `.bat` 等待运行即可）。
+
+    > **特别提醒**：由于这一款 MCU 需要最新版本的 ARM 编译器，请务必提前更新你的 Arm-Keil 为最新版本（本教程环境：版本号为 5.43a，编译器版本号为 6.24）。
+
+2.  **生成工程**：
+    解压后进入到 `bsp\nxp\mcx\mcxa\frdm-mcxa346`，在该路径打开 env 工具或是通过指令 `cd` 过去。
+    输入 `scons --target=mdk5`（注意有空格）。如果是初次使用会提示缺少相关的包，按照文字提示输入 `pkgs --update` 下载依赖包，然后重新执行 `scons --target=mdk5` 就可以编译出 Keil 工程了。
+    
+    > **注意**：路径不得有任何中文字符。
+
+3.  **配置 Keil**：
+    打开 `project.uvprojx` 就是我们的工程了。
+    在 [Keil 官网](https://www.keil.arm.com/packs/mcxa346_dfp-nxp/versions/) 可以下载最新的芯片包。
+    同时在“魔法棒”（Options for Target）里切换编译器版本到 6.24。并在 Utilities 界面点击 Settings -> Add，选中第一个 MCXA 的选项加入，然后按 OK 退出。
+
+4.  **编译与烧录**：
+    尝试编译。板子开箱后上电会有一个默认程序，如果编译成功后有 6 个警告不影响。尝试烧录，即可烧录例程。
+
+### 二、FlexPWM 的配置与输出
+
+> 虽然目前还没有支持 RT-Thread Studio 图形化配置，但是我们可以通过 env 工具快速配置。
+
+1.  我们回到 env 环境工具中，输入 `menuconfig`，等待进入配置界面。
+2.  依次通过键盘上下方向键和回车选择：
+    `RT-Thread Components` → `Device Drivers` → 选中 `Using PWM device driver`
+3.  通过 Backspace（或 ESC）键退回到主界面，进入：
+    `Hardware Drivers Config` → `Enable PWM` → `Enable eFlex PWM0`（这里选择这个仅作示例）
+    以及 `Enable Timer` → `Enable Timer Enable CIMER0`
+4.  按 ESC 退回界面，在保存界面保存并退出。
+5.  接下来可以编写代码。
+
+### 五、示例 PWM 代码
+
+```c
+// GPIO 口请根据盒内折页快速查阅 PWM 对应的可以复用的 GPIO，或者根据 NXP 官网的原理图快速定位
+#include <rtdevice.h>
+#include "drv_pin.h"
+
+#include "fsl_common.h"
+#include "fsl_port.h"
+#include "fsl_pwm.h"
+#include "fsl_clock.h"
+#include "drv_pwm.h"
+
+/* 
+ * 选定引脚：P3_0 
+ * 对应芯片：PWM0_A0 
+ * 即 Base=PWM0, Submodule=0, Channel=A
+ */
+
+#define PWM_BASE          FLEXPWM0          /* PWM外设基地址：PWM0 */
+#define PWM_SUBMODULE     kPWM_Module_0     /* 子模块：0 */
+#define PWM_CHANNEL       kPWM_PwmA         /* 通道：A (即 PWM0_A0) */
+
+#define PORT              PORT3             /* 端口：PORT3 */
+#define PIN               0U                /* 引脚号：0 */
+#define CLOCK_GATE        kCLOCK_GateGPIO3  /* 端口时钟门控 */
+
+/* 
+ * 在 NXP 芯片上，GPIO 需要切换到特定的 Alt 模式才能输出 PWM。
+ * 根据手册 https://www.nxp.com/doc/MCXAP144M240F60RM，PWM 功能通常是 Alt 5 。 
+ */
+#define PIN_ALT           kPORT_MuxAlt5     
+
+#define PWM_CLK_FREQ      CLOCK_GetFreq(kCLOCK_BusClk) /* 获取总线时钟频率 */
+
+/* 呼吸灯参数 */
+#define SPEED_MS          20                /* 每次变化的延时 (毫秒) */
+#define STEP_VALUE        2                 /* 步进值：每次变化的幅度 */
+
+
+#define LED_PIN           ((3*32)+19)
+#define BUTTON_PIN        ((1*32)+7)
+
+static rt_bool_t led_state = RT_FALSE;
+
+
+void button_irq_callback(void *args)
+{
+    rt_kprintf("SW2 pressed\n");
+}
+
+//--------------------------PWM-----------------------------//
+/* 初始化 PWM 的底层函数 */
+void init_pwm_hardware(void)
+{
+    pwm_config_t pwmConfig;
+    pwm_signal_param_t pwmSignal[1];
+    status_t status;
+    
+    /* 开启端口时钟 */
+    CLOCK_EnableClock(CLOCK_GATE); 
+
+    /* 配置引脚复用：把 P3_0 切换到 Alt 模式 */
+    PORT_SetPinMux(PORT, PIN, PIN_ALT);
+
+    /* 获取默认配置 */
+    PWM_GetDefaultConfig(&pwmConfig);
+    
+    /* 使用立即加载模式 */
+    pwmConfig.reloadLogic = kPWM_ReloadImmediate;
+    
+    /* 初始化 PWM  */
+    if (PWM_Init(PWM_BASE, PWM_SUBMODULE, &pwmConfig) == kStatus_Fail)
+    {
+        rt_kprintf("Error: PWM Init failed\n");
+        return;
+    }
+
+    /* 配置具体的 PWM Channel 参数 */
+    pwmSignal[0].pwmChannel       = PWM_CHANNEL;
+    pwmSignal[0].level            = kPWM_HighTrue;      /* 高电平点亮 */
+    pwmSignal[0].dutyCyclePercent = 0;                  /* 初始亮度 0 */
+    pwmSignal[0].deadtimeValue    = 0;                  
+    pwmSignal[0].faultState       = kPWM_PwmFaultState0;
+    pwmSignal[0].pwmchannelenable = true;               
+
+    /* 设置 PWM 波形：频率 1kHz */
+    status = PWM_SetupPwm(PWM_BASE, PWM_SUBMODULE, pwmSignal, 1, kPWM_SignedCenterAligned, 1000U, PWM_CLK_FREQ);
+
+    if (status != kStatus_Success)
+    {
+        rt_kprintf("Error: PWM Setup failed\n");
+        return;
+    }
+
+    PWM_SetPwmLdok(PWM_BASE, 1U << PWM_SUBMODULE, true);
+
+    /* 启动 PWM 定时器 */
+    PWM_StartTimer(PWM_BASE, 1U << PWM_SUBMODULE);
+
+    rt_kprintf("PWM Hardware Initialized on P3_0.\n");
+}
+//----------------------------------------------------------------//
+
+int main(void)
+{
+    rt_kprintf("Starting Breathing LED Demo on P3_0...\r\n");
+
+    /* 初始化底层 PWM */
+    init_pwm_hardware();
+    
+    int duty_cycle = 0;
+    int direction = 1; 
+    
+#if defined(__CC_ARM)
+    rt_kprintf("using armcc, version: %d\n", __ARMCC_VERSION);
+#elif defined(__clang__)
+    rt_kprintf("using armclang, version: %d\n", __ARMCC_VERSION);
+#elif defined(__ICCARM__)
+    rt_kprintf("using iccarm, version: %d\n", __VER__);
+#elif defined(__GNUC__)
+    rt_kprintf("using gcc, version: %d.%d\n", __GNUC__, __GNUC_MINOR__);
+#endif
+
+    rt_kprintf("FRDM-MCXA346\r\n");
+
+    /* Configure LED pin as output */
+    // rt_pin_mode(LED_PIN, PIN_MODE_OUTPUT);
+    // rt_pin_write(LED_PIN, PIN_LOW);
+
+    /* Configure button pin as input with pull-up */
+    rt_pin_mode(BUTTON_PIN, PIN_MODE_INPUT_PULLUP);
+
+    /* Attach interrupt to button pin */
+    rt_pin_attach_irq(BUTTON_PIN, PIN_IRQ_MODE_FALLING, button_irq_callback, RT_NULL);
+    rt_pin_irq_enable(BUTTON_PIN, PIN_IRQ_ENABLE);
+
+    while (1)
+    {
+        /* Toggle LED state */
+        // led_state = !led_state;
+        // rt_pin_write(LED_PIN, led_state ? PIN_HIGH : PIN_LOW);
+        // rt_thread_mdelay(500);
+        
+        duty_cycle += (direction * STEP_VALUE);
+
+        if (duty_cycle >= 100)
+        {
+            duty_cycle = 100;
+            direction = -1; 
+        }
+        else if (duty_cycle <= 0)
+        {
+            duty_cycle = 0;
+            direction = 1; 
+        }
+
+        /* 更新占空比 */
+        PWM_UpdatePwmDutycycle(PWM_BASE, 
+                               PWM_SUBMODULE, 
+                               PWM_CHANNEL, 
+                               kPWM_SignedCenterAligned, 
+                               (uint8_t)duty_cycle);
+
+        /* 必须设置 LDOK 才能生效 */
+        PWM_SetPwmLdok(PWM_BASE, 1U << PWM_SUBMODULE, true);
+
+        rt_thread_mdelay(SPEED_MS);
+    }
+}
+```

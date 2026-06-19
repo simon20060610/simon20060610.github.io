@@ -12298,6 +12298,9 @@ select,
 textarea {
   font-family: AlimamaFangYuanTi, "PingFang SC", "Microsoft JhengHei", "Microsoft YaHei", sans-serif !important;
 }
+body {
+  background: linear-gradient(rgba(247,249,252,0.82), rgba(247,249,252,0.82)), url("/img/background.jpg") center top/cover fixed no-repeat;
+}
 .img-x {
   position: relative;
   overflow-y: hidden;

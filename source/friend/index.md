@@ -13,7 +13,7 @@ comments: false
 - 名称：SimonChen 的技术小站
 - 地址：https://simon20060610.github.io
 - 简介：嵌入式、RT-Thread、ROS2 与开发记录
-- 头像：https://raw.githubusercontent.com/Simon20060610/Pics_for_blog/main/log.png
+- 头像：/img/logo.jpg
 
 
 <script type="text/javascript" defer src="/js/friend.js"></script>

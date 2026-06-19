@@ -3,11 +3,11 @@ version: 6.1.5
 # Icarus theme variant, can be "default" or "cyberpunk"
 variant: default
 # Path or URL to the website's logo
-logo: https://raw.githubusercontent.com/Simon20060610/Pics_for_blog/main/log.png #/img/logo.svg
+logo: /img/logo.jpg
 # Page metadata configurations
 head:
     # URL or path to the website's icon
-    favicon: https://raw.githubusercontent.com/Simon20060610/Pics_for_blog/main/log.png #/img/favicon.svg
+    favicon: /img/logo.jpg
     # Open Graph metadata
     # https://hexo.io/docs/helpers.html#open-graph
     open_graph:
@@ -22,7 +22,7 @@ head:
         url: https://simon20060610.github.io/
         # Page cover (og:image) (optional)
         # You should leave this blank for most of the time
-        image: https://raw.githubusercontent.com/Simon20060610/Pics_for_blog/main/log.png
+        image: /img/logo.jpg
         # Site name (og:site_name) (optional)
         # You should leave this blank for most of the time
         site_name: SimonChen的技术小站
@@ -61,7 +61,7 @@ head:
         author: SimonChen
         # Page images (optional)
         # You should leave this blank for most of the time
-        image: https://raw.githubusercontent.com/Simon20060610/Pics_for_blog/main/log.png
+        image: /img/logo.jpg
     # Additional HTML meta tags in an array
     meta:
         # Meta tag specified in <attribute>=<value> style
@@ -249,7 +249,7 @@ widgets:
         # Author's current location
         location: 中国·四川·成都
         # URL or path to the avatar image
-        avatar: https://raw.githubusercontent.com/Simon20060610/Pics_for_blog/main/微信图片_20251204170909_153_49.jpg
+        avatar: /img/avatar.jpg
         avatar_rounded: true
         # Email address for the Gravatar
         gravatar: 

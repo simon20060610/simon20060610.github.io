@@ -1,5 +1,5 @@
 ---
-thumbnail: https://raw.githubusercontent.com/Simon20060610/Pics_for_blog/main/Screenshot%202025-07-10%20151937.png
+thumbnail: /img/background.jpg
 title: About
 date: 2025-11-23
 comments: false

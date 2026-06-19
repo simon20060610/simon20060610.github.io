@@ -34,6 +34,19 @@ Toy2.0 当前主要由几部分组成：
 
 背景图片使用《重返未来：1999》官网背景动图，声音基于维尔汀在游戏中的语音录屏内容使用 MiniMax 训练而成。
 
+## 项目仓库
+
+项目代码已经上传到 GitHub：
+
+[Simon20060610/Raspberry-Pi-desktop-companion](https://github.com/Simon20060610/Raspberry-Pi-desktop-companion)
+
+可以通过下面的命令克隆到本地：
+
+```bash
+git clone https://github.com/Simon20060610/Raspberry-Pi-desktop-companion.git
+cd Raspberry-Pi-desktop-companion
+```
+
 ## 安全说明
 
 仓库中不应保存真实 API Key、私人课表、运行记忆或生成音频。以下内容都应该只保存在本地环境中：
@@ -93,7 +106,7 @@ conda Python 3.11 主程序
 ```bash
 conda create -n toy_env python=3.11 -y
 conda activate toy_env
-cd ~/Toy2.0
+cd ~/Raspberry-Pi-desktop-companion
 ```
 
 安装 Python 依赖：
@@ -169,7 +182,7 @@ REPLY_AUDIO_FILE=reply.mp3
 
 ```bash
 conda activate toy_env
-cd ~/Toy2.0
+cd ~/Raspberry-Pi-desktop-companion
 python TOY/main.py
 ```
 
